@@ -7,6 +7,10 @@ on:
         description: 'ID of a GitHub app that will create the sync PR'
         required: true
         type: string
+      environment:
+        description: 'ID of a GitHub app that will create the sync PR'
+        required: true
+        type: string
       branch-name:
         description: 'Name of the branch to create for the sync'
         required: false
@@ -37,20 +41,24 @@ on:
       zulip-api-token:
         description: 'Zulip API token for authentication'
         required: false
+      secret-token:
+        description: 'Foo'
+        required: true
 
 jobs:
   perform-pull:
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
     outputs:
       pr_url: ${{ steps.update-pr.outputs.pr_url }}
       pull_result: ${{ steps.josh-sync.outputs.pull_result }}
-    permissions:
-      contents: write
-      pull-requests: write
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: '0'
+
+      - name: test secret
+        run: echo ${{ secrets.secret-token }} | cut -c1-1
 
       - name: Install stable Rust toolchain
         run: rustup update stable
@@ -120,6 +128,7 @@ jobs:
   send-zulip-notification:
     needs: [ perform-pull ]
     if: ${{ !cancelled() && inputs.zulip-stream-id != '' }}
+    environment: ${{ inputs.environment }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
